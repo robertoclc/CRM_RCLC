@@ -1,0 +1,42 @@
+/* ========================================== */
+/* ESTILOS DO CRM RCLC (style.css)            */
+/* ========================================== */
+
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
+body { background-color: #f8fafc; color: #0f172a; min-height: 100vh; display: flex; flex-direction: column; }
+
+header { background-color: #034574; color: #ffffff; padding: 12px 24px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+main { flex: 1; padding: 20px 24px; max-width: 1400px; margin: 0 auto; width: 100%; }
+
+/* Classes de controle de exibição das abas (Garante que nunca se sobrepõem) */
+.view-section { display: none; }
+.view-section.active-flex { display: flex; }
+.view-section.active-block { display: block; }
+.view-section.active-grid { display: grid; }
+
+/* Kanban Board & Colunas com Largura Uniforme e Fixa */
+.kanban-board { 
+    display: flex; 
+    gap: 16px; 
+    overflow-x: auto; 
+    padding-bottom: 16px; 
+    width: 100%; 
+}
+
+.kanban-column { 
+    min-width: 300px; 
+    max-width: 300px; 
+    width: 300px; 
+    flex-shrink: 0; 
+}
+
+/* Dashboard em Duas Colunas Lado a Lado */
+#dashboardContainer { 
+    grid-template-columns: 1fr 1fr; 
+    gap: 20px; 
+    width: 100%; 
+}
+
+@media (max-width: 1024px) {
+    #dashboardContainer { grid-template-columns: 1fr; }
+}

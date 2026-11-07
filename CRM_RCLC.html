@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CRM - RCLC Soluções Gerenciais</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-slate-100 font-sans text-slate-800">
+
+    <!-- Header -->
+    <header class="bg-[#034574] text-white shadow-md sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex items-center space-x-3">
+                <div class="bg-blue-600 p-2 rounded-lg text-xl font-bold"><i class="fa-solid fa-chart-line"></i></div>
+                <div>
+                    <h1 class="text-lg font-bold tracking-wide">RCLC — Soluções Gerenciais</h1>
+                    <p class="text-xs text-slate-300">CRM de Vendas e Gestão de Leads</p>
+                </div>
+            </div>
+            <div class="flex flex-wrap items-center gap-2 justify-end">
+                <button onclick="openModal()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-lg text-xs font-medium flex items-center gap-1.5 shadow transition"><i class="fa-solid fa-plus"></i> Novo Prospect</button>
+                <label class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-lg text-xs font-medium flex items-center gap-1.5 shadow cursor-pointer transition">
+                    <i class="fa-solid fa-file-excel"></i> Importar Excel
+                    <input type="file" id="csvFileInput" class="hidden" accept=".xlsx, .xls, .csv" onchange="handleImportExcel(event)">
+                </label>
+                <button onclick="exportJSON(prospects)" class="bg-sky-700 hover:bg-sky-600 text-white px-3 py-2 rounded-lg text-xs font-medium flex items-center gap-1.5 shadow transition">
+                    <i class="fa-solid fa-cloud-arrow-down"></i> Fazer Backup
+                </button>
+                <label class="bg-slate-700 hover:bg-slate-600 text-white px-3 py-2 rounded-lg text-xs font-medium flex items-center gap-1.5 shadow cursor-pointer transition">
+                    <i class="fa-solid fa-cloud-arrow-up"></i> Restaurar Backup
+                    <input type="file" id="jsonBackupInput" class="hidden" accept=".json" onchange="handleRestoreBackup(event)">
+                </label>
+                <button onclick="clearAllData()" class="bg-rose-600 hover:bg-rose-700 text-white px-3 py-2 rounded-lg text-xs font-medium flex items-center gap-1.5 shadow transition"><i class="fa-solid fa-trash"></i> Limpar</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Caixa de Status / Progresso de Importação -->
+    <div id="importStatus" class="max-w-7xl mx-auto px-4 mt-4 hidden">
+        <div class="bg-sky-50 border border-sky-200 text-sky-800 p-3 rounded-xl flex items-center justify-between shadow-sm">
+            <div class="flex items-center gap-3">
+                <div class="animate-spin text-sky-600"><i class="fa-solid fa-spinner text-lg"></i></div>
+                <div>
+                    <div id="importStatusText" class="text-xs font-bold">A processar ficheiro Excel...</div>
+                    <div id="importCount" class="text-[11px] text-sky-600">A ler linhas e a tratar acentuação.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 py-6">
+        <!-- DASHBOARD DE MÉTRICAS + CARD ESTATÍSTICO COMPACTO NO TOPO -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+            <div class="bg-white p-4 rounded-xl border border-slate-200 flex justify-between items-center shadow-sm">
+                <div>
+                    <div class="text-[11px] font-bold text-slate-500 uppercase">Total Prospects</div>
+                    <div class="text-2xl font-extrabold text-slate-900 mt-1" id="metricTotal">0</div>
+                </div>
+                <div class="w-10 h-10 rounded-full bg-sky-100 text-sky-600 flex items-center justify-center"><i class="fa-solid fa-users"></i></div>
+            </div>
+            <div class="bg-white p-4 rounded-xl border border-slate-200 flex justify-between items-center shadow-sm">
+                <div>
+                    <div class="text-[11px] font-bold text-slate-500 uppercase">Em Negociação</div>
+                    <div class="text-2xl font-extrabold text-amber-600 mt-1" id="metricNegociacao">0</div>
+                </div>
+                <div class="w-10 h-10 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center"><i class="fa-solid fa-handshake"></i></div>
+            </div>
+            <div class="bg-white p-4 rounded-xl border border-slate-200 flex justify-between items-center shadow-sm">
+                <div>
+                    <div class="text-[11px] font-bold text-slate-500 uppercase">Clientes Conquistados</div>
+                    <div class="text-2xl font-extrabold text-emerald-600 mt-1" id="metricGanhos">0</div>
+                </div>
+                <div class="w-10 h-10 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center"><i class="fa-solid fa-trophy"></i></div>
+            </div>
+            <div class="bg-white p-4 rounded-xl border border-slate-200 flex justify-between items-center shadow-sm">
+                <div>
+                    <div class="text-[11px] font-bold text-slate-500 uppercase">Taxa de Conversão</div>
+                    <div class="text-2xl font-extrabold text-purple-600 mt-1" id="metricTaxa">0%</div>
+                </div>
+                <div class="w-10 h-10 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center"><i class="fa-solid fa-chart-line"></i></div>
+            </div>
+            <!-- Card Estatístico Compacto (Sem Contato / Sem Interesse) -->
+            <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                <div class="text-[10px] font-extrabold text-slate-500 uppercase flex items-center gap-1 mb-1">
+                    <i class="fa-solid fa-chart-pie text-sky-600"></i> Outros Status
+                </div>
+                <div class="flex justify-between items-center text-xs">
+                    <span class="text-slate-600 font-medium">Sem Contato:</span>
+                    <span id="statSemContato" class="bg-slate-200 text-slate-700 px-2 py-0.5 rounded-full font-bold">0</span>
+                </div>
+                <div class="flex justify-between items-center text-xs mt-1">
+                    <span class="text-slate-600 font-medium">Sem Interesse:</span>
+                    <span id="statSemInteresse" class="bg-rose-100 text-rose-700 px-2 py-0.5 rounded-full font-bold">0</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filter Bar -->
+        <div class="bg-white p-4 rounded-xl shadow-sm mb-6 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="w-full md:w-1/3 relative">
+                <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400"><i class="fa-solid fa-search"></i></span>
+                <input type="text" id="searchInput" oninput="renderApp()" placeholder="Pesquisar por empresa, segmento ou telefone..." class="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+            <div class="flex items-center gap-3 w-full md:w-auto justify-end">
+                <select id="originFilter" onchange="renderApp()" class="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm">
+                    <option value="">Todas as Origens</option>
+                    <option value="Google Maps">Google Maps</option>
+                    <option value="Instagram">Instagram</option>
+                    <option value="LinkedIn">LinkedIn</option>
+                    <option value="Indicação">Indicação</option>
+                </select>
+                <div class="flex bg-slate-100 p-1 rounded-lg border border-slate-200">
+                    <button id="btnKanbanView" onclick="switchView('kanban')" class="px-3 py-1.5 rounded-md text-xs font-semibold bg-white text-slate-900 shadow-sm">Kanban</button>
+                    <button id="btnTableView" onclick="switchView('table')" class="px-3 py-1.5 rounded-md text-xs font-semibold text-slate-600">Tabela</button>
+                    <button id="btnDashboardView" onclick="switchView('dashboard')" class="px-3 py-1.5 rounded-md text-xs font-semibold text-slate-600"><i class="fa-solid fa-chart-column mr-1"></i> Dashboard</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Layout Kanban (Visível por padrão) -->
+        <div id="kanbanLayoutWrapper" class="view-section active-flex flex-col xl:flex-row gap-4 items-start w-full">
+            <div id="kanbanContainer" class="flex gap-4 overflow-x-auto pb-4 flex-1 w-full min-h-[500px]"></div>
+        </div>
+
+        <!-- Tabela Completa (Oculta por padrão) -->
+        <div id="tableContainer" class="view-section bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm w-full">
+            <table class="w-full text-left border-collapse text-sm">
+                <thead>
+                    <tr class="bg-slate-50 border-b border-slate-200 text-slate-500 text-[11px] uppercase font-bold">
+                        <th class="p-3">Empresa / Segmento</th>
+                        <th class="p-3">Origem</th>
+                        <th class="p-3">WhatsApp</th>
+                        <th class="p-3">Status do Funil</th>
+                        <th class="p-3">Valor Estimado</th>
+                        <th class="p-3 text-right">Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody"></tbody>
+            </table>
+        </div>
+
+        <!-- Dashboard View (Oculto por padrão) -->
+        <div id="dashboardContainer" class="view-section grid-cols-1 lg:grid-cols-2 gap-6 w-full">
+            <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                <h3 class="text-sm font-extrabold text-slate-700 uppercase mb-4">Funil de Vendas (Distribuição por Etapa)</h3>
+                <div id="funnelBars" class="space-y-4"></div>
+            </div>
+            <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                <h3 class="text-sm font-extrabold text-slate-700 uppercase mb-4">Principais Segmentos Prospectados</h3>
+                <div id="segmentBars" class="space-y-4"></div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal Adicionar / Editar -->
+    <div id="leadModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl">
+            <div class="bg-[#034574] text-white px-6 py-4 flex justify-between items-center">
+                <h3 id="modalTitle" class="font-bold text-sm uppercase">Novo Prospect</h3>
+                <button onclick="closeModal()" class="text-slate-200 hover:text-white transition"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <form id="leadForm" onsubmit="saveProspect(event)">
+                <div class="p-6 space-y-4">
+                    <input type="hidden" id="leadId">
+                    <div>
+                        <label class="text-[11px] font-bold text-[#034574] uppercase tracking-wide">Nome da Empresa *</label>
+                        <input type="text" id="companyName" required class="w-full mt-1 px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="text-[11px] font-bold text-[#034574] uppercase tracking-wide">Segmento / Contato</label>
+                            <input type="text" id="contactName" class="w-full mt-1 px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="text-[11px] font-bold text-[#034574] uppercase tracking-wide">Telefone / WhatsApp</label>
+                            <input type="text" id="phone" class="w-full mt-1 px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="text-[11px] font-bold text-[#034574] uppercase tracking-wide">Status do Funil *</label>
+                            <select id="statusSelect" required class="w-full mt-1 px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="Novo prospect">Novo prospect</option>
+                                <option value="Primeiro contato enviado">Primeiro contato enviado</option>
+                                <option value="Segundo contato enviado">Segundo contato enviado</option>
+                                <option value="Sem interesse">Sem interesse</option>
+                                <option value="Em negociação">Em negociação</option>
+                                <option value="Cliente conquistado">Cliente conquistado</option>
+                                <option value="Sem contato">Sem contato</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-[11px] font-bold text-[#034574] uppercase tracking-wide">Origem</label>
+                            <select id="originSelect" class="w-full mt-1 px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="Google Maps">Google Maps</option>
+                                <option value="Instagram">Instagram</option>
+                                <option value="LinkedIn">LinkedIn</option>
+                                <option value="Indicação">Indicação</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="text-[11px] font-bold text-[#034574] uppercase tracking-wide">Valor Estimado (R$)</label>
+                            <input type="number" step="0.01" id="valueInput" class="w-full mt-1 px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="text-[11px] font-bold text-[#034574] uppercase tracking-wide">Cidade / Bairro</label>
+                            <input type="text" id="cityInput" class="w-full mt-1 px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="text-[11px] font-bold text-[#034574] uppercase tracking-wide">Observações / Diagnóstico</label>
+                        <textarea id="notesInput" rows="3" class="w-full mt-1 px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+                    </div>
+                </div>
+                <div class="bg-slate-50 px-6 py-3 border-t border-slate-200 flex justify-between items-center">
+                    <button type="button" id="deleteBtn" onclick="deleteCurrentLead()" class="bg-rose-500 hover:bg-rose-600 text-white px-3 py-2 rounded-lg text-xs font-semibold shadow hidden">Excluir</button>
+                    <div class="flex gap-2 ml-auto">
+                        <button type="button" onclick="closeModal()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-lg text-xs font-semibold">Cancelar</button>
+                        <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-xs font-semibold shadow">Salvar Prospect</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Scripts Modulares -->
+    <script src="config.js"></script>
+    <script src="backup.js"></script>
+    <script src="app.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
